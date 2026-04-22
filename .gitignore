@@ -1,0 +1,11 @@
+/.venv/
+/node_modules/
+/build/
+/dist/
+/docs/
+/tests/
+/examples/
+/scripts/
+/configs/
+/logs/
+/reports/

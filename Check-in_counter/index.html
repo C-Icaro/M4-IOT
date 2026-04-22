@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contador de Check-ins — Inteli</title>
+  <style>
+    :root {
+      --bg: #1a1b26;
+      --surface: #24283b;
+      --text: #c0caf5;
+      --muted: #565f89;
+      --accent: #7aa2f7;
+      --warning: #e0af68;
+      --danger: #f7768e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 1.5rem;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.25rem;
+      margin: 0 0 0.25rem 0;
+      color: var(--text);
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+    input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--muted);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    #resultado {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: var(--surface);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    #resultado.visible { display: block; }
+    #resultado h2 {
+      font-size: 0.95rem;
+      margin: 0 0 0.5rem 0;
+      color: var(--muted);
+    }
+    #resultado p { margin: 0.25rem 0; }
+    #resultado .alerta {
+      margin-top: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    #resultado .alerta.perigo {
+      background: rgba(247, 118, 142, 0.15);
+      color: var(--danger);
+    }
+    #resultado .alerta.ok {
+      background: rgba(122, 162, 247, 0.15);
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Contador de Check-ins — Inteli</h1>
+    <p class="subtitle">Limite: 20% de falta. Cada check-in = 0,75%.</p>
+
+    <label for="ja-perdidos">Check-ins já perdidos no módulo</label>
+    <input type="number" id="ja-perdidos" min="0" step="0.5" value="0" placeholder="0">
+
+    <label for="dias">Dias que planeja faltar</label>
+    <input type="number" id="dias" min="0" value="0" placeholder="0">
+
+    <label for="checkins-extras">Check-ins extras que planeja faltar (além dos dias)</label>
+    <input type="number" id="checkins-extras" min="0" value="0" placeholder="0">
+
+    <button type="button" id="calcular">Calcular</button>
+
+    <div id="resultado">
+      <h2>Situação atual</h2>
+      <p id="out-atual"></p>
+      <p id="out-restante"></p>
+      <h2>Após suas faltas planejadas</h2>
+      <p id="out-planejado"></p>
+      <p id="out-pct-final"></p>
+      <div id="alerta" class="alerta"></div>
+    </div>
+  </div>
+
+  <script>
+    const CHECKINS_POR_DIA = 3;
+    const PCT_POR_CHECKIN = 0.75;
+    const LIMITE_PCT = 20;
+    const MAX_CHECKINS_FALTA = LIMITE_PCT / PCT_POR_CHECKIN;
+
+    function percentualAtual(checkinsJaPerdidos) {
+      return checkinsJaPerdidos * PCT_POR_CHECKIN;
+    }
+
+    function restantePermitido(checkinsJaPerdidos) {
+      return Math.max(0, MAX_CHECKINS_FALTA - checkinsJaPerdidos);
+    }
+
+    function simularPlanejamento(checkinsJaPerdidos, diasPlanejados, checkinsPlanejados) {
+      const checkinsPlanejadosTotal = checkinsPlanejados + diasPlanejados * CHECKINS_POR_DIA;
+      const checkinsTotalFalta = checkinsJaPerdidos + checkinsPlanejadosTotal;
+      const pctFinal = checkinsTotalFalta * PCT_POR_CHECKIN;
+      const checkinsRestantes = restantePermitido(checkinsJaPerdidos);
+      const ultrapassaLimite = pctFinal > LIMITE_PCT;
+      return {
+        checkinsTotalFalta: checkinsTotalFalta,
+        pctFinal: pctFinal,
+        checkinsRestantes: checkinsRestantes,
+        ultrapassaLimite: ultrapassaLimite,
+        checkinsPlanejadosTotal: checkinsPlanejadosTotal
+      };
+    }
+
+    function parseNum(input, defaultValue) {
+      const v = input.value.trim();
+      if (v === '') return defaultValue;
+      const n = parseFloat(v.replace(',', '.'));
+      return isNaN(n) || n < 0 ? defaultValue : n;
+    }
+
+    function parseIntInput(input, defaultValue) {
+      const v = input.value.trim();
+      if (v === '') return defaultValue;
+      const n = parseInt(v, 10);
+      return isNaN(n) || n < 0 ? defaultValue : n;
+    }
+
+    document.getElementById('calcular').addEventListener('click', function () {
+      const jaPerdidos = parseNum(document.getElementById('ja-perdidos'), 0);
+      const dias = parseIntInput(document.getElementById('dias'), 0);
+      const checkinsExtras = parseIntInput(document.getElementById('checkins-extras'), 0);
+
+      const pctAtual = percentualAtual(jaPerdidos);
+      const restante = restantePermitido(jaPerdidos);
+      const res = simularPlanejamento(jaPerdidos, dias, checkinsExtras);
+
+      document.getElementById('out-atual').textContent =
+        'Check-ins já perdidos: ' + jaPerdidos + ' — Percentual atual: ' + pctAtual.toFixed(2) + '%';
+      document.getElementById('out-restante').textContent =
+        'Check-ins que ainda pode faltar (sem ultrapassar 20%): ' + Math.floor(restante);
+      document.getElementById('out-planejado').textContent =
+        'Total de check-ins em falta após planejamento: ' + res.checkinsTotalFalta.toFixed(1) +
+        ' (dias: ' + dias + ' = ' + (dias * CHECKINS_POR_DIA) + ' check-ins + ' + checkinsExtras + ' extras)';
+      document.getElementById('out-pct-final').textContent =
+        'Percentual final de falta: ' + res.pctFinal.toFixed(2) + '%';
+
+      const alerta = document.getElementById('alerta');
+      alerta.className = 'alerta ' + (res.ultrapassaLimite ? 'perigo' : 'ok');
+      alerta.textContent = res.ultrapassaLimite
+        ? 'ATENÇÃO: você ultrapassará o limite de 20%. Risco de corte da bolsa.'
+        : 'Você permanece dentro do limite de 20%.';
+
+      document.getElementById('resultado').classList.add('visible');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+# Contador de check-ins — Inteli
+# CLI usa apenas biblioteca padrão (argparse). Nenhuma dependência externa.
