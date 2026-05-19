@@ -1,0 +1,15 @@
+amostras/*
+modelo/*
+!amostras/.gitkeep
+!modelo/.gitkeep
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.webp
+*.mp4
+*.avi
+*.mov
+.venv/
+__pycache__/
+*.pyc
