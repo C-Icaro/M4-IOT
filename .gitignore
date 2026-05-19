@@ -9,3 +9,8 @@
 /configs/
 /logs/
 /reports/
+
+.env
+.vscode/
+
+/venv/
